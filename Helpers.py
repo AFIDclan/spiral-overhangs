@@ -7,7 +7,6 @@ def fit_circle(layer):
     positions = []
 
     for pos in layer.get_positions():
-        print(pos.x, pos.y, pos.z)
         if (pos.x is None or pos.y is None or pos.z is None):
             continue
         positions.append([pos.x, pos.y, pos.z])
@@ -44,8 +43,20 @@ def fit_circle(layer):
     return True, np.array([xc, yc, zc]), r, start_angle
 
 
-# class Circlify:
-#     __init__(self, start_ang, start_radius, step_length):
-#         self.sphere_radius = start_radius/math.cos(start_ang)
-#         self.step_length = step_length
-#         self.step_beta = 2*math.asin(step_length/(2*self.sphere_radius))
+class ArcGenerator:
+    def __init__(self, start_ang, start_radius, step_length):
+        self.sphere_radius = start_radius/math.cos(start_ang)
+        self.step_length = step_length
+        self.step_beta = 2*math.asin(step_length/(2*self.sphere_radius))
+
+        self.angle = start_ang
+
+    def step(self):
+        self.angle += self.step_beta
+        if self.angle > math.pi/2:
+            return True, None, None
+        
+        radius = self.sphere_radius*math.cos(self.angle)
+        height = self.sphere_radius*math.sin(self.angle)
+
+        return False, radius, height
