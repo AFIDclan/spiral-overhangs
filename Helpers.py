@@ -46,6 +46,7 @@ def fit_circle(layer):
 class ArcGenerator:
     def __init__(self, start_ang, start_radius, step_length):
         self.sphere_radius = start_radius/math.cos(start_ang)
+        self.sphere_radius = min(self.sphere_radius, 4000)
         self.step_length = step_length
         self.step_beta = 2*math.asin(step_length/(2*self.sphere_radius))
 

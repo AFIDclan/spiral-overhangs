@@ -19,6 +19,49 @@ class Line:
         return self.line
 
 
+class FeedRate(Line):
+    def __init__(self, line=""):
+        super().__init__(line)
+        self.x = parse('X', line)
+        self.y = parse('Y', line)
+        self.z = parse('Z', line)
+        self.e = parse('E', line)
+    
+    @staticmethod
+    def is_type(line):
+        return line.startswith('M203') and ('X' in line or 'Y' in line or 'Z' in line or 'E' in line)
+
+    def render(self):
+        str = "M203"
+        if self.x is not None:
+            str += " X{}".format(self.x)
+        if self.y is not None:
+            str += " Y{}".format(self.y)
+        if self.z is not None:
+            str += " Z{}".format(self.z)
+        if self.e is not None:
+            str += " E{}".format(self.e)
+        return str
+
+class Dwell(Line):
+    def __init__(self, line=""):
+        super().__init__(line)
+        self.p = parse('P', line)
+        self.s = parse('S', line)
+
+    @staticmethod
+    def is_type(line):
+        return line.startswith('G4') and ('P' in line or 'S' in line)
+
+    def render(self):
+        str = "G4"
+        if self.p is not None:
+            str += " P{}".format(self.p)
+        if self.s is not None:
+            str += " S{}".format(self.s)
+        return str
+
+        
 class Comment(Line):
     def __init__(self, line):
         super().__init__(line)
@@ -29,6 +72,30 @@ class Comment(Line):
 
     def render(self):
         return self.line
+
+class BedTemp(Line):
+    def __init__(self, line=""):
+        super().__init__(line)
+        self.s = parse('S', line)
+
+    @staticmethod
+    def is_type(line):
+        return line.startswith('M140') and 'S' in line
+
+    def render(self):
+        return "M140 S{}".format(self.s)
+
+class ExtruderTemp(Line):
+    def __init__(self, line=""):
+        super().__init__(line)
+        self.s = parse('S', line)
+
+    @staticmethod
+    def is_type(line):
+        return line.startswith('M104') and 'S' in line
+
+    def render(self):
+        return "M104 S{}".format(self.s)
 
 class Acceleration(Line):
     # Acceleration keys:
@@ -67,9 +134,8 @@ class Position (Line):
         self.y = parse('Y', line)
         self.z = parse('Z', line)
         self.e = parse('E', line)
+        self.f = parse('F', line)
 
-        if (self.e is None):
-            self.e = 0.03762
 
     @staticmethod
     def is_type(line):
@@ -85,6 +151,8 @@ class Position (Line):
             str += " Z{}".format(self.z)
         if self.e is not None:
             str += " E{}".format(self.e)
+        if self.f is not None:
+            str += " F{}".format(self.f)
         return str
 
 
@@ -146,6 +214,14 @@ class Layer:
                 lines.append(Acceleration(line))
             elif Comment.is_type(line):
                 lines.append(Comment(line))
+            elif ExtruderTemp.is_type(line):
+                lines.append(ExtruderTemp(line))
+            elif FeedRate.is_type(line):
+                lines.append(FeedRate(line))
+            elif BedTemp.is_type(line):
+                lines.append(BedTemp(line))
+            elif Dwell.is_type(line):
+                lines.append(Dwell(line))
             else:
                 lines.append(Unknown(line))
         
