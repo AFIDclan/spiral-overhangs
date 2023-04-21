@@ -4,9 +4,11 @@ import numpy as np
 import math
 import copy
 
-ll = LayerList.FromFile("putter (Envy).gcode")
+file="Test print"
 
-start_layers = ll.layers[0:-2]
+ll = LayerList.FromFile(file+".gcode")
+
+start_layers = ll.layers[0:10]
 end_layers = ll.layers[-1:]
 
 # Mostly working -----
@@ -15,7 +17,7 @@ end_layers = ll.layers[-1:]
 
 extrude_mm_per_mm = 0.06281503928279897
 layer_height = 0.4
-
+extrude_temp = 198
 min_seconds_per_circle = 15
 
 
@@ -26,8 +28,11 @@ arc_gen = ArcGenerator((math.pi/2)-0.05, circle_radius, layer_height)
 
 circle_steps = 100
 layers=[]
+bottom_layers=[]
 term = False
 step_nums = 0
+
+temp_set=False
 
 initial_offset = None
 while not term:
@@ -51,19 +56,17 @@ while not term:
     layer = Layer()
     layer.lines = [] # Needed to clear the lines from the previous layer. NO idea why we need this.
 
-    temp = ExtruderTemp()
-    temp.s = 185
+    # Set the extruder temp (For PLA) only on the first layer so it can be tuned
+    if (temp_set == False):
+        temp_set = True
+        temp = ExtruderTemp()
+        temp.s = extrude_temp
+        layer.add(temp)
 
-    #bed_temp = BedTemp()
-    #bed_temp.s = 40
-
-    layer.add(temp) # Set the extruder temp (For PLA)
-    #layer.add(bed_temp) # Set the extruder temp (For PLA)
     
-    
-    # feedrate = R*2*math.pi/min_seconds_per_circle
-    # feedrate = min(feedrate, 4)
-    # feedrate = max(feedrate, 1)
+    feedrate = R*2*math.pi/min_seconds_per_circle
+    feedrate = min(feedrate, 15)
+    feedrate = max(feedrate, 5)
 
     feedrate = 5
     pos=None
@@ -85,10 +88,23 @@ while not term:
 
     layer.add_terminator()
     layers.append(layer)
+    
+    bottom_layers.append(layer)
+
+    if (len(bottom_layers) > 1):
+        layer = copy.deepcopy(bottom_layers[-2])
+        
+        # Loop through the positions and bump the z up by the layer height
+        for pos in layer.get_positions():
+            pos.z += layer_height
+
+        layers.append(layer)
+
+    
 
 
 ll_out = LayerList(start_layers+layers+end_layers)
 
 
-with open("putter (Envy) -- out.gcode", 'w') as f:
+with open(file+".out.gcode", 'w') as f:
     f.write(ll_out.render())
