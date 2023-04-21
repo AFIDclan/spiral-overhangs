@@ -12,7 +12,7 @@ def fit_circle(layer):
         positions.append([pos.x, pos.y, pos.z])
 
     # Convert positions to a numpy array
-    positions = np.array(positions[2:])
+    positions = np.array(positions[4:])
     # Calculate the center of the points
     center = np.mean(positions, axis=0)
 
