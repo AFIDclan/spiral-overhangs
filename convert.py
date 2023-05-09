@@ -4,28 +4,33 @@ import numpy as np
 import math
 import copy
 
-file="Test print"
+file="dome2"
 
 ll = LayerList.FromFile(file+".gcode")
 
+# -- SELECT WHICH LAYERS TO KEEP AT BEGINNING AND END --
 start_layers = ll.layers[0:10]
 end_layers = ll.layers[-1:]
 
-# Mostly working -----
-# extrude_rate = 0.033
-# layer_height = 0.3
+
 
 extrude_mm_per_mm = 0.06281503928279897
 layer_height = 0.4
 extrude_temp = 198
-min_seconds_per_circle = 15
+min_seconds_per_circle = 10
 
 
+# -- SELECT LAYER TO CIRCLE FIT --
 ret, circle_center, circle_radius, start_angle = fit_circle(start_layers[-1])
 
 
+# Generate a dome that starts at the top of the circle found on the layer above
+# and ends with the top horizontal
+# The first param here is the starting angle of the dome (essentially the tangent of the dome at the circle)
+# 0 would be a full dome looking thing, pi/2 would basically be flat
 arc_gen = ArcGenerator((math.pi/2)-0.05, circle_radius, layer_height)
 
+# num circle segments per layer
 circle_steps = 100
 layers=[]
 bottom_layers=[]
@@ -41,20 +46,14 @@ while not term:
     if term:
         break
 
-    seg_len = (R*2*math.pi)/circle_steps
-
-    extrude_per_segment = extrude_mm_per_mm*seg_len
-
+   
     step_nums += 1
     if (initial_offset is None):
         initial_offset = offset
         
     offset = offset - initial_offset
 
-    
-    #Create a circle of positions around the center
-    layer = Layer()
-    layer.lines = [] # Needed to clear the lines from the previous layer. NO idea why we need this.
+    layer = layer_from_circle(R, circle_center, offset, start_angle, min_seconds_per_circle, extrude_mm_per_mm)
 
     # Set the extruder temp (For PLA) only on the first layer so it can be tuned
     if (temp_set == False):
@@ -63,45 +62,17 @@ while not term:
         temp.s = extrude_temp
         layer.add(temp)
 
-    
-    feedrate = R*2*math.pi/min_seconds_per_circle
-    feedrate = min(feedrate, 15)
-    feedrate = max(feedrate, 5)
-
-    feedrate = 5
-    pos=None
- 
-    for i in range(circle_steps):
-        ang = i/circle_steps*2*np.pi
-        ang = ang + start_angle
-        pos = Position()
-        pos.x = circle_center[0] + R*np.cos(ang)
-        pos.y = circle_center[1] + R*np.sin(ang)
-        pos.z = circle_center[2] + offset
-        pos.e = extrude_per_segment
-
-        # Convert mm/s to mm/min
-        pos.f = feedrate * 60
-        
-
-        layer.add(pos)
-
     layer.add_terminator()
     layers.append(layer)
+
+    # Add another layer 3 rings back so we can leave room for the extruder
+    if (step_nums > 3):
+        term, R2, offset2 = arc_gen.step_for_params(arc_gen.angle-(arc_gen.step_beta*2.5), arc_gen.sphere_radius+layer_height)
+        offset2 = offset2 - initial_offset
+        layer2 = layer_from_circle(R2, circle_center, offset2, start_angle, min_seconds_per_circle, extrude_mm_per_mm/2)
+        layer2.add_terminator()
+        layers.append(layer2)
     
-    bottom_layers.append(layer)
-
-    if (len(bottom_layers) > 1):
-        layer = copy.deepcopy(bottom_layers[-2])
-        
-        # Loop through the positions and bump the z up by the layer height
-        for pos in layer.get_positions():
-            pos.z += layer_height
-
-        layers.append(layer)
-
-    
-
 
 ll_out = LayerList(start_layers+layers+end_layers)
 
