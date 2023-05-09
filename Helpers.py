@@ -49,7 +49,8 @@ def layer_from_circle(
     offset, 
     start_angle,
     min_seconds_per_circle, 
-    extrude_mm_per_mm):
+    extrude_mm_per_mm,
+    set_temp):
 
     circle_steps = 100
 
@@ -62,12 +63,18 @@ def layer_from_circle(
     layer = Layer()
     layer.lines = [] # Needed to clear the lines from the previous layer. NO idea why we need this.
 
+    if set_temp:
+        temp = ExtruderTemp()
+        temp.s = set_temp
+        layer.add(temp)
     
     feedrate = R*2*math.pi/min_seconds_per_circle
     feedrate = min(feedrate, 12)
     feedrate = max(feedrate, 5)
 
-    # feedrate = 5
+    # Still haven't gotten the above to work, so just use a fixed feedrate for now
+    feedrate = 5
+
     pos=None
  
     for i in range(circle_steps+1):
@@ -102,12 +109,14 @@ class ArcGenerator:
 
     def step(self):
         
+        self.angle += self.step_beta
+
         if self.angle > math.pi/2:
             return True, None, None
 
         res = self.step_for_params(self.angle, self.sphere_radius)
 
-        self.angle += self.step_beta
+        
 
         return res
 

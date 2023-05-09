@@ -16,8 +16,8 @@ end_layers = ll.layers[-1:]
 
 extrude_mm_per_mm = 0.06281503928279897
 layer_height = 0.4
-extrude_temp = 198
-min_seconds_per_circle = 10
+extrude_temp = 185
+min_seconds_per_circle = 15
 
 
 # -- SELECT LAYER TO CIRCLE FIT --
@@ -53,25 +53,22 @@ while not term:
         
     offset = offset - initial_offset
 
-    layer = layer_from_circle(R, circle_center, offset, start_angle, min_seconds_per_circle, extrude_mm_per_mm)
+    layer = layer_from_circle(R, circle_center, offset, start_angle, min_seconds_per_circle, extrude_mm_per_mm, extrude_temp if temp_set == False else None)
 
     # Set the extruder temp (For PLA) only on the first layer so it can be tuned
     if (temp_set == False):
         temp_set = True
-        temp = ExtruderTemp()
-        temp.s = extrude_temp
-        layer.add(temp)
 
-    layer.add_terminator()
+    #layer.add_terminator()
     layers.append(layer)
 
     # Add another layer 3 rings back so we can leave room for the extruder
-    if (step_nums > 3):
-        term, R2, offset2 = arc_gen.step_for_params(arc_gen.angle-(arc_gen.step_beta*2.5), arc_gen.sphere_radius+layer_height)
-        offset2 = offset2 - initial_offset
-        layer2 = layer_from_circle(R2, circle_center, offset2, start_angle, min_seconds_per_circle, extrude_mm_per_mm/2)
-        layer2.add_terminator()
-        layers.append(layer2)
+    # if (step_nums > 3):
+    #     term, R2, offset2 = arc_gen.step_for_params(arc_gen.angle-(arc_gen.step_beta*2.5), arc_gen.sphere_radius+layer_height)
+    #     offset2 = offset2 - initial_offset
+    #     layer2 = layer_from_circle(R2, circle_center, offset2, start_angle, min_seconds_per_circle, extrude_mm_per_mm/2, None)
+    #     layer2.add_terminator()
+    #     layers.append(layer2)
     
 
 ll_out = LayerList(start_layers+layers+end_layers)
